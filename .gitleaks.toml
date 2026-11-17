@@ -1,0 +1,23 @@
+# Configuracion de gitleaks para reachwhy. Version fija: ver .gitleaks-version y docs/tooling.md
+title = "reachwhy"
+
+[extend]
+useDefault = true
+
+# Regla estructural: GUID de suscripcion con contexto (un GUID suelto no dispara).
+[[rules]]
+id          = "subscription-guid"
+description = "GUID de suscripcion con contexto"
+regex       = '''(?i)(?:[/\\]subscriptions[/\\]|\bsubscriptions?\s*[=:]\s*["']?)([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'''
+secretGroup = 1
+keywords    = ["subscription"]
+
+  # Allowlist exacta: GUID sintetico SOLO dentro de corpus/, schemas/ y docs/.
+  # condition = "AND" es imprescindible: con el valor por defecto ("OR") el regex solo ya
+  # exime el GUID en cualquier carpeta.
+  [[rules.allowlists]]
+  description = "GUID sintetico (solo corpus, schemas y docs)"
+  condition   = "AND"
+  regexTarget = "secret"
+  regexes     = ['''^0{8}-0{4}-0{4}-0{4}-[0-9a-f]{12}$''']
+  paths       = ['''(^|/)corpus/''', '''(^|/)schemas/''', '''(^|/)docs/''']

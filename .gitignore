@@ -1,0 +1,45 @@
+# --- Datos crudos y reales de recoleccion: NUNCA al repo ---
+*.raw.json
+*.real.json
+snapshots/
+
+# --- Archivos empaquetados (descargas de herramientas): nunca al repo ---
+*.tar.gz
+
+# --- Rust ---
+target/
+**/*.rs.bk
+*.pdb
+
+# --- Node / pnpm ---
+node_modules/
+.pnpm-store/
+dist/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Tauri ---
+src-tauri/target/
+src-tauri/gen/
+src-tauri/WixTools/
+
+# --- Python (herramientas auxiliares) ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# --- Locales / editor / sistema ---
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

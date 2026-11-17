@@ -1,0 +1,10 @@
+# Alternativa opcional al hook de .githooks/ (si se usa el framework pre-commit).
+repos:
+  - repo: local
+    hooks:
+      - id: reachwhy-hygiene
+        name: higiene de datos sinteticos
+        language: system
+        entry: python scripts/ci/check_hygiene.py
+        pass_filenames: true
+        files: '(^(corpus|schemas|docs)/.*\.(json|md)$)|(\.raw\.json$)|((^|/)snapshots/)'

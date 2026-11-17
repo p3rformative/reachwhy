@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "demo-basic-01",
+  "minRulesetVersion": "0.1.0",
+  "source": {
+    "type": "synthetic",
+    "title": "Demo sintetica del repositorio",
+    "readOn": "2026-11-12",
+    "license": {
+      "mode": "reconstructed-own-data",
+      "quote": false,
+      "spdx": null,
+      "evidence": null,
+      "checkedOn": null
+    }
+  },
+  "pair": {
+    "origin": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+    "target": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+    "targetSubresource": "blob"
+  },
+  "expected": {
+    "overall": "red",
+    "firstRedHop": "dns",
+    "hops": {
+      "dns": {
+        "state": "red",
+        "code": "DNS_ZONE_NOT_LINKED"
+      },
+      "pe": {
+        "state": "green"
+      },
+      "rbac": {
+        "state": "red",
+        "code": "RBAC_NO_DATA_ROLE"
+      }
+    },
+    "mustNotBeGreen": []
+  },
+  "reviewedBy": "pendiente",
+  "notes": "Dos fallas deliberadas: zona privatelink sin link a la VNet de integracion y sin rol de datos. Datos 100 % sinteticos; no corresponde a ningun entorno real."
+}

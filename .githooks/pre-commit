@@ -1,0 +1,44 @@
+#!/bin/sh
+# Hook pre-commit de reachwhy: solo higiene estructural de datos sinteticos (docs/plan.md, seccion 2.5).
+# Instalar: git config core.hooksPath .githooks   (o scripts/install-hooks.sh / scripts/install-hooks.ps1)
+# Lee el arbol de trabajo de los archivos preparados (staged). No contiene listas de palabras de empresas ni personas.
+set -u
+
+repo_root=$(git rev-parse --show-toplevel) || exit 1
+cd "$repo_root" || exit 1
+
+if command -v python3 >/dev/null 2>&1; then PY="python3"
+elif command -v python >/dev/null 2>&1; then PY="python"
+elif command -v py >/dev/null 2>&1; then PY="py -3"
+else echo "reachwhy: se necesita Python 3 para el hook de higiene" >&2; exit 1
+fi
+
+files=$(git diff --cached --name-only --diff-filter=ACMR | while IFS= read -r f; do
+  case "$f" in
+    *.raw.json|snapshots/*|*/snapshots/*) printf '%s\n' "$f" ;;
+    corpus/*.json|corpus/*.md|schemas/*.json|schemas/*.md|docs/*.json|docs/*.md) printf '%s\n' "$f" ;;
+  esac
+done)
+
+if [ -n "$files" ]; then
+  # shellcheck disable=SC2086
+  printf '%s\n' "$files" | tr '\n' '\0' | xargs -0 $PY scripts/ci/check_hygiene.py || {
+    echo "reachwhy: higiene de datos sinteticos FALLO (ver arriba). Commit abortado." >&2
+    exit 1
+  }
+fi
+
+# Escaneo de secretos con gitleaks, si esta instalado. Version fija: ver docs/tooling.md
+GL="${GITLEAKS_BIN:-gitleaks}"
+if command -v "$GL" >/dev/null 2>&1; then
+  want=$(tr -d '[:space:]' < .gitleaks-version 2>/dev/null)
+  have=$("$GL" version 2>/dev/null | tr -d '[:space:]')
+  [ "$have" = "$want" ] || echo "reachwhy: aviso: gitleaks $have instalado, version fija $want (docs/tooling.md)" >&2
+  "$GL" git --pre-commit --staged --redact --no-banner --config .gitleaks.toml . || {
+    echo "reachwhy: gitleaks encontro hallazgos. Commit abortado." >&2
+    exit 1
+  }
+else
+  echo "reachwhy: aviso: gitleaks no esta instalado; se omite el escaneo local (docs/tooling.md)" >&2
+fi
+exit 0

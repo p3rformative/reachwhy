@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Solo lectura a nivel de workflow. Sin secretos, sin pull_request_target, sin escritura.
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (historial completo)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Instalar gitleaks (version y SHA-256 fijados en el repo)
+        run: |
+          set -euo pipefail
+          version="$(tr -d '[:space:]' < .gitleaks-version)"
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}"
+          # El checksum esperado vive en el repo (.gitleaks-sha256), no se descarga en la corrida.
+          expected="$(awk -v a="$archive" '$2 == a { print $1 }' .gitleaks-sha256)"
+          test -n "$expected" || { echo "No hay SHA-256 fijado para $archive en .gitleaks-sha256" >&2; exit 1; }
+          echo "$expected  $RUNNER_TEMP/$archive" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/gitleaks" gitleaks
+          "$RUNNER_TEMP/gitleaks/gitleaks" version
+
+      - name: gitleaks git (historial completo)
+        run: |
+          "$RUNNER_TEMP/gitleaks/gitleaks" git --no-banner --redact --config .gitleaks.toml .
+
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Higiene de datos sinteticos
+        run: python scripts/ci/check_hygiene.py corpus schemas docs
+
+      - name: Tests de higiene
+        run: python -m unittest discover -s scripts/ci/tests -v

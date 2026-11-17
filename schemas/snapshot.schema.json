@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "reachwhy snapshot",
+  "description": "Instantanea de solo lectura del plano de control (forma ARM podada). Version de esquema semver; cambios aditivos = minor, rupturas = major.",
+  "type": "object",
+  "required": ["schemaVersion", "kind", "id", "synthetic", "collectedAt", "resources", "roleAssignments", "roleDefinitions"],
+  "properties": {
+    "schemaVersion": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "kind": { "const": "reachwhy.snapshot" },
+    "id": { "type": "string", "minLength": 1 },
+    "synthetic": { "type": "boolean", "description": "true en demo y corpus; false en capturas reales (que nunca van al repo)." },
+    "collectedAt": { "type": "string", "format": "date-time", "description": "Reloj de la captura; el motor no usa la hora actual." },
+    "collector": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "mode": { "enum": ["arg", "arm", "manual"] }
+      },
+      "additionalProperties": false
+    },
+    "visibility": {
+      "type": "object",
+      "properties": {
+        "subscriptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "readable"],
+            "properties": { "id": { "$ref": "#/$defs/guid" }, "readable": { "type": "boolean" } },
+            "additionalProperties": false
+          }
+        },
+        "unreadable": { "type": "array", "items": { "type": "string" }, "description": "Ambitos no legibles; hacen ambar lo que dependa de ellos." }
+      },
+      "additionalProperties": false
+    },
+    "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
+    "roleAssignments": { "type": "array", "items": { "type": "object" } },
+    "roleDefinitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": { "id": { "type": "string" }, "name": { "type": "string" } }
+      }
+    },
+    "declared": {
+      "type": "object",
+      "description": "Hechos que ARM no expone, declarados por el usuario (se marcan como declarados en la evidencia).",
+      "properties": {
+        "dnsForwarders": { "type": "array", "items": { "type": "object" } },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Opcional. Observaciones aportadas por el usuario; reachwhy no ejecuta nada.",
+      "properties": {
+        "runtime": { "type": "array", "items": { "$ref": "#/$defs/runtimeObservation" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "patternProperties": { "^x-": {} },
+  "additionalProperties": false,
+  "$defs": {
+    "guid": { "type": "string", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "resource": {
+      "type": "object",
+      "required": ["id", "type", "name"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string" },
+        "location": { "type": "string" },
+        "identity": { "type": "object" },
+        "properties": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "runtimeObservation": {
+      "type": "object",
+      "required": ["tool", "observedAt", "observedFrom", "target", "provenance"],
+      "properties": {
+        "tool": { "type": "string" },
+        "toolVersion": { "type": "string" },
+        "observedAt": { "type": "string", "format": "date-time" },
+        "observedFrom": { "type": "string", "description": "Id del origen donde se hizo la observacion; debe coincidir con el origen del par." },
+        "target": { "type": "string" },
+        "dns": {
+          "type": ["object", "null"],
+          "properties": {
+            "answers": { "type": "array", "items": { "type": "string" } },
+            "classification": { "enum": ["private", "public", "nxdomain"] }
+          },
+          "required": ["answers", "classification"],
+          "additionalProperties": false
+        },
+        "tcp": {
+          "type": ["object", "null"],
+          "properties": { "port": { "type": "integer", "minimum": 1, "maximum": 65535 }, "connected": { "type": "boolean" } },
+          "required": ["port", "connected"],
+          "additionalProperties": false
+        },
+        "tls": { "type": ["object", "null"] },
+        "http": {
+          "type": ["object", "null"],
+          "properties": { "status": { "type": "integer", "minimum": 100, "maximum": 599 } },
+          "required": ["status"],
+          "additionalProperties": false
+        },
+        "provenance": { "enum": ["user-supplied"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

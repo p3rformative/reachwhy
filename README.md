@@ -6,7 +6,7 @@ Read-only, hop-by-hop diagnosis for Azure: DNS, network and RBAC.
 
 [Leer en español](README.es.md)
 
-[![CI](https://github.com/georgiegozz/reachwhy/actions/workflows/ci.yml/badge.svg)](https://github.com/georgiegozz/reachwhy/actions/workflows/ci.yml)
+[![CI](https://github.com/p3rformative/reachwhy/actions/workflows/ci.yml/badge.svg)](https://github.com/p3rformative/reachwhy/actions/workflows/ci.yml)
 ![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-lightgrey)
 ![read-only](https://img.shields.io/badge/Azure%20access-read--only-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -99,7 +99,7 @@ Requirements: git and Python 3.12. Optional: [gitleaks](https://github.com/gitle
 bash:
 
 ```sh
-git clone https://github.com/georgiegozz/reachwhy.git && cd reachwhy
+git clone https://github.com/p3rformative/reachwhy.git && cd reachwhy
 scripts/install-hooks.sh
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
@@ -109,7 +109,7 @@ gitleaks git --no-banner --redact --config .gitleaks.toml .
 PowerShell:
 
 ```powershell
-git clone https://github.com/georgiegozz/reachwhy.git; Set-Location reachwhy
+git clone https://github.com/p3rformative/reachwhy.git; Set-Location reachwhy
 ./scripts/install-hooks.ps1
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
@@ -142,4 +142,4 @@ No Azure or Microsoft icons are used in this repo.
 
 ## License
 
-[MIT](LICENSE) © 2026 Jorge González (georgiegozz).
+[MIT](LICENSE) © 2026 Jorge González (p3rformative).

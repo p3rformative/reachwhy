@@ -20,6 +20,26 @@ Scope: Azure only, 3 origins × 3 targets (see [docs/design.md](docs/design.md))
 - [ ] Demo recording made from synthetic data only.
 - [ ] CI for Rust and JavaScript dependencies and corpus tests (see [docs/pending-ci.md](docs/pending-ci.md)).
 
+## Planned improvements (by phase)
+
+Details, affected hops and public sources: [docs/design.md](docs/design.md#planned-improvements). All of them keep reachwhy at Reader only.
+
+**Phase 1: control-plane reads (Reader only)**
+- [ ] (S) Fallback to internet (`resolutionPolicy: NxDomainRedirect`) on private zone links, and linked `privatelink.*` zones that have no record for the target.
+- [ ] (S–M) Site properties `dnsConfiguration` and `outboundVnetRouting` / legacy `vnetRouteAllEnabled`.
+- [ ] (S) Private zones and records in other readable subscriptions through Resource Graph `dnsresources`.
+
+**Phase 2: Functions host storage (needs a user-declared host storage account)**
+- [ ] (M) Host data roles: Storage Blob Data Owner, Storage Table Data Contributor, and trigger-dependent roles.
+- [ ] (M) Host storage network path: blob, file and table private endpoints (plus queue for Durable Functions), content share routing, ports 443 and 445.
+
+**Phase 3: user-run evidence**
+- [ ] (M) Read-only PowerShell and bash script that the user runs inside the workload to produce `evidence.runtime`; reachwhy never runs it.
+
+**Phase 4: more origins**
+- [ ] (L) Container Apps environments with custom DNS.
+- [ ] (M) Flex Consumption as an origin (subnet delegation `Microsoft.App/environments`); until then, amber instead of a false red.
+
 ## Later
 
 - [ ] Import runtime evidence from probes run inside the workload (`evidence.runtime` adapters).

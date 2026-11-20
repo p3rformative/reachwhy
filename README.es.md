@@ -11,16 +11,16 @@ Diagnóstico de solo lectura, salto por salto, para Azure: DNS, red y RBAC.
 ![read-only](https://img.shields.io/badge/Azure%20access-read--only-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **Estado: pre-alfa.** Todavía no hay código de la aplicación. Hoy el repo contiene el diseño, los JSON Schema, un caso de prueba sintético y las herramientas de higiene de datos. Todo lo que abajo describe la app es comportamiento previsto y está marcado así.
+> **Estado: pre-alfa.** Todavía no hay aplicación: ni interfaz de escritorio ni recolector para Azure. Hoy el repo contiene el diseño, los JSON Schema, casos de prueba sintéticos, las herramientas de higiene de datos y un prototipo en Python que analiza un archivo de snapshot local para el salto dns y el enrutamiento de la aplicación (fase 1, en un pull request). Todo lo que abajo describe la app es comportamiento previsto y está marcado así.
 
 ## Demo
 
-Aún no hay GIF ni captura, porque no hay nada que ejecutar. Esta es la **salida prevista** para el caso sintético [`corpus/demo-basic-01`](corpus/demo-basic-01). Los estados y códigos salen del [`expected.json`](corpus/demo-basic-01/expected.json) de ese caso; los saltos que el caso no afirma se muestran con `·`.
+Aún no hay GIF ni captura, porque la app no existe. Esta es la **salida prevista** para el caso sintético [`corpus/demo-basic-01`](corpus/demo-basic-01). Los estados y códigos salen del [`expected.json`](corpus/demo-basic-01/expected.json) de ese caso; los saltos que el caso no afirma se muestran con `·`.
 
 *Siempre es el DNS. Excepto cuando también es RBAC.*
 
 ```text
-# ejemplo sintético, salida prevista (ningún código la produce todavía)
+# ejemplo sintético, salida prevista (el prototipo en Python solo evalúa por ahora los saltos origin (enrutamiento) y dns)
 origen   func-demo  (Function App, integración VNet: snet-func-demo)
 destino  stdemo001  (Storage, blob, private endpoint pe-st-demo-blob)
 
@@ -83,8 +83,9 @@ Detalle y lista completa de lo que queda fuera: [docs/design.md](docs/design.md#
 | Orígenes | ninguno (sin código) | Function App, App Service, Container App |
 | Destinos | ninguno (sin código) | Storage (blob, file, queue, table, dfs), Key Vault, Azure SQL Database, todos detrás de un private endpoint |
 | Formatos | JSON Schema del snapshot y del veredicto esperado (v1.0.0) | importar evidencia en ejecución (`evidence.runtime`, ya es un campo opcional del esquema) |
-| Corpus de pruebas | 1 caso sintético (`demo-basic-01`) | más casos sintéticos reconstruidos desde artículos públicos de troubleshooting |
-| Herramientas | gitleaks e higiene de datos en CI y pre-commit | tests del motor sobre el corpus |
+| Corpus de pruebas | 9 casos sintéticos (`demo-basic-01` y 8 de la fase 1) | más casos sintéticos reconstruidos desde artículos públicos de troubleshooting |
+| Prototipo de análisis | Python: salto dns y enrutamiento de la aplicación sobre un snapshot local (fase 1) | los demás saltos, luego el motor en Rust |
+| Herramientas | gitleaks e higiene de datos en CI y pre-commit | tests del motor sobre el corpus en CI |
 
 Ver [ROADMAP.md](ROADMAP.md).
 
@@ -115,6 +116,22 @@ python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
 gitleaks git --no-banner --redact --config .gitleaks.toml .
 ```
+
+Prototipo de la fase 1 (Python 3.12+, `pytest` para los tests; solo lee archivos locales):
+
+```sh
+python -m pip install pytest jsonschema
+python -m pytest
+PYTHONPATH=src python -m reachwhy --case corpus/synthetic-dns-fallback-01
+```
+
+```powershell
+python -m pip install pytest jsonschema
+python -m pytest
+$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
+```
+
+El veredicto es JSON con `complete: false`: solo se evalúan los saltos `origin` (enrutamiento de la aplicación) y `dns`. El CI todavía no ejecuta estos tests (ver [docs/pending-ci.md](docs/pending-ci.md)).
 
 Todo dato del repo es sintético: IPs solo en `10.20.0.0/16` y rangos de documentación, nombres con `demo` o `example`, GUID de ceros. Los snapshots crudos o reales (`*.raw.json`, `*.real.json`, `snapshots/`) están en `.gitignore` y el hook los rechaza.
 

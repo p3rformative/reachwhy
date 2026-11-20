@@ -17,6 +17,8 @@ bash:
 scripts/install-hooks.sh
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
+python -m pip install pytest jsonschema   # prototype tests
+python -m pytest
 ```
 
 PowerShell:
@@ -25,6 +27,8 @@ PowerShell:
 ./scripts/install-hooks.ps1
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
+python -m pip install pytest jsonschema   # prototype tests
+python -m pytest
 ```
 
 Installing [gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 is recommended; the hook runs it when present. See [docs/tooling.md](docs/tooling.md).

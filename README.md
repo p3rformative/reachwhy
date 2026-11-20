@@ -11,16 +11,16 @@ Read-only, hop-by-hop diagnosis for Azure: DNS, network and RBAC.
 ![read-only](https://img.shields.io/badge/Azure%20access-read--only-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **Status: pre-alpha.** There is no application code yet. Today the repo contains the design, the JSON schemas, one synthetic test case and the data-hygiene tooling. Everything below that describes the app is the planned behavior, and it is labeled as such.
+> **Status: pre-alpha.** There is no application yet: no desktop UI and no collector for Azure. Today the repo contains the design, the JSON schemas, synthetic test cases, the data-hygiene tooling and a Python prototype that analyzes a local snapshot file for the dns hop and application routing (phase 1, in a pull request). Everything below that describes the app is the planned behavior, and it is labeled as such.
 
 ## Demo
 
-There is no GIF or screenshot yet, because there is nothing to run. This is the **planned output** for the synthetic case [`corpus/demo-basic-01`](corpus/demo-basic-01). The hop states and codes come from that case's [`expected.json`](corpus/demo-basic-01/expected.json); hops the case does not assert are shown as `·`.
+There is no GIF or screenshot yet, because the app does not exist. This is the **planned output** for the synthetic case [`corpus/demo-basic-01`](corpus/demo-basic-01). The hop states and codes come from that case's [`expected.json`](corpus/demo-basic-01/expected.json); hops the case does not assert are shown as `·`.
 
 *It's always DNS. Except when it's also RBAC.*
 
 ```text
-# synthetic example, planned output (not produced by any code yet)
+# synthetic example, planned output (the Python prototype evaluates only the origin routing and dns hops so far)
 origin  func-demo  (Function App, VNet integration: snet-func-demo)
 target  stdemo001  (Storage, blob, private endpoint pe-st-demo-blob)
 
@@ -83,8 +83,9 @@ Details and the full out-of-scope list: [docs/design.md](docs/design.md#out-of-s
 | Origins | none (no code) | Function App, App Service, Container App |
 | Targets | none (no code) | Storage (blob, file, queue, table, dfs), Key Vault, Azure SQL Database, all behind a private endpoint |
 | Data formats | snapshot and expected-verdict JSON Schemas (v1.0.0) | runtime evidence import (`evidence.runtime`, already an optional schema field) |
-| Test corpus | 1 synthetic case (`demo-basic-01`) | more synthetic cases reconstructed from public troubleshooting articles |
-| Tooling | gitleaks and data-hygiene checks in CI and pre-commit | engine tests over the corpus |
+| Test corpus | 9 synthetic cases (`demo-basic-01` and 8 for phase 1) | more synthetic cases reconstructed from public troubleshooting articles |
+| Analysis prototype | Python: dns hop and application routing over a local snapshot (phase 1) | the other hops, then the Rust engine |
+| Tooling | gitleaks and data-hygiene checks in CI and pre-commit | engine tests over the corpus in CI |
 
 See [ROADMAP.md](ROADMAP.md).
 
@@ -115,6 +116,22 @@ python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
 gitleaks git --no-banner --redact --config .gitleaks.toml .
 ```
+
+Phase 1 prototype (Python 3.12+, `pytest` for the tests; it only reads local files):
+
+```sh
+python -m pip install pytest jsonschema
+python -m pytest
+PYTHONPATH=src python -m reachwhy --case corpus/synthetic-dns-fallback-01
+```
+
+```powershell
+python -m pip install pytest jsonschema
+python -m pytest
+$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
+```
+
+The verdict is JSON with `complete: false`: only the `origin` (application routing) and `dns` hops are evaluated. CI does not run these tests yet (see [docs/pending-ci.md](docs/pending-ci.md)).
 
 All data in this repo is synthetic: IPs only in `10.20.0.0/16` and documentation ranges, names containing `demo` or `example`, all-zero GUIDs. Raw or real snapshots (`*.raw.json`, `*.real.json`, `snapshots/`) are git-ignored and rejected by the hook.
 

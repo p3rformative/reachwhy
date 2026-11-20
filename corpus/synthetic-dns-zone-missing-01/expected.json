@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "synthetic-dns-zone-missing-01",
+  "minRulesetVersion": "0.1.0",
+  "source": {
+    "type": "synthetic",
+    "url": "https://learn.microsoft.com/en-us/azure/dns/private-dns-arg",
+    "title": "Private DNS information in Azure Resource Graph",
+    "readOn": "2026-11-19",
+    "license": {
+      "mode": "reconstructed-own-data",
+      "quote": false,
+      "spdx": null,
+      "evidence": null,
+      "checkedOn": null
+    }
+  },
+  "pair": {
+    "origin": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+    "target": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+    "targetSubresource": "blob"
+  },
+  "expected": {
+    "overall": "red",
+    "firstRedHop": "dns",
+    "hops": {
+      "dns": {
+        "state": "red",
+        "code": "DNS_ZONE_MISSING"
+      }
+    },
+    "mustNotBeGreen": []
+  },
+  "reviewedBy": "pendiente",
+  "notes": "La zona no existe en ninguna suscripcion legible y no hay DNS personalizado: rojo. Datos 100 % sinteticos. El motor es parcial: overall se calcula solo sobre los saltos evaluados (origin, dns) y nunca es green mientras complete sea false (un verde se degrada a amber)."
+}

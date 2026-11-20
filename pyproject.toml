@@ -1,9 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "reachwhy"
 version = "0.1.0.dev0"
 description = "Read-only, hop-by-hop diagnosis of Azure PaaS reachability (prototype: analysis of a local JSON snapshot)."
 requires-python = ">=3.12"
 license = { text = "MIT" }
+
+[project.scripts]
+reachwhy = "reachwhy.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

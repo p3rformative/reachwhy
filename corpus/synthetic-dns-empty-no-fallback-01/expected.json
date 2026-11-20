@@ -32,5 +32,5 @@
     "mustNotBeGreen": []
   },
   "reviewedBy": "pendiente",
-  "notes": "Zona privatelink enlazada a la VNet de integracion pero sin registros, y el link con resolutionPolicy Default: NXDOMAIN. Datos 100 % sinteticos. Mientras el motor este incompleto, overall se calcula solo sobre los saltos implementados (origin, dns)."
+  "notes": "Zona privatelink enlazada a la VNet de integracion pero sin registros, y el link con resolutionPolicy Default: NXDOMAIN. Datos 100 % sinteticos. El motor es parcial: overall se calcula solo sobre los saltos evaluados (origin, dns) y nunca es green mientras complete sea false (un verde se degrada a amber)."
 }

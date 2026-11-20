@@ -38,5 +38,5 @@
     ]
   },
   "reviewedBy": "pendiente",
-  "notes": "Enrutamiento de aplicacion apagado (outboundVnetRouting.allTraffic=false) y el nombre no resuelve a IP privada: origin ambar, dns rojo. Datos 100 % sinteticos. Mientras el motor este incompleto, overall se calcula solo sobre los saltos implementados (origin, dns)."
+  "notes": "Enrutamiento de aplicacion apagado (outboundVnetRouting.allTraffic=false) y el nombre no resuelve a IP privada: origin ambar, dns rojo. Datos 100 % sinteticos. El motor es parcial: overall se calcula solo sobre los saltos evaluados (origin, dns) y nunca es green mientras complete sea false (un verde se degrada a amber)."
 }

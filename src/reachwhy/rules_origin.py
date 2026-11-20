@@ -37,7 +37,7 @@ def application_routing(props: dict) -> tuple[bool | None, list[dict], bool]:
 def check_origin_routing(snap: Snapshot, origin_id: str, dns_hop: Hop | None) -> Hop:
     origin = snap.get(origin_id)
     if origin is None:
-        return Hop("origin", AMBER, "ORIGIN_INPUT_INCOMPLETE", "The origin is not in the snapshot.", [], [],
+        return Hop("origin", AMBER, "ORIGIN_INPUT_INCOMPLETE", "The origin is not in the snapshot.", [], [SRC_OVERVIEW],
                    why_unverifiable="Origin missing from the snapshot.", how_to_verify="Provide the origin resource.")
     routed, raw_ev, conflict = application_routing(origin.get("properties") or {})
     ev = [evidence(origin["id"], e["path"], e["value"]) for e in raw_ev]

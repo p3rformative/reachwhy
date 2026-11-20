@@ -69,7 +69,35 @@ def _a_records(snap: Snapshot, zone: dict) -> dict[str, list[str]]:
     return recs
 
 
+def _visibility_gap(snap: Snapshot, zone_name: str, fqdn: str, ev: list[dict]) -> Hop | None:
+    """Amber DNS_ZONE_NOT_VISIBLE when an absent zone or link may simply be outside what was read.
+    A red "missing" or "not linked" needs a snapshot that declares its visibility and has no unreadable scope."""
+    declared = (snap.data.get("visibility") or {}).get("unreadable")
+    if snap.has_unreadable_scope:
+        why = "A subscription or scope that may hold the zone or its link (for example a hub) is not readable."
+        cause = f"Zone {zone_name} or its link to the integration VNet may be in a scope that is not readable."
+    elif not snap.visibility_declared:
+        why = ("The snapshot does not declare which subscriptions were read (visibility.subscriptions and "
+               "visibility.unreadable), so an absent zone or link cannot be told apart from one outside the readable scope.")
+        cause = f"The snapshot does not declare its visibility, so the absence of zone {zone_name} or of its link is not conclusive."
+    else:
+        return None
+    return _amber("DNS_ZONE_NOT_VISIBLE", cause, why, fqdn,
+                  ev + [evidence("visibility", "unreadable", declared, "declared")], [SRC_ARG])
+
+
+APP_SETTINGS_CAVEAT = ("App settings WEBSITE_DNS_SERVER and WEBSITE_DNS_ALT_SERVER are not readable with Reader: "
+                       "this verdict assumes they are not set; only the site property dnsConfiguration was checked.")
+
+
 def check_dns(snap: Snapshot, origin_id: str, target_id: str, subresource: str) -> Hop:
+    """DNS hop. Every verdict, red included, carries the Reader caveat about app settings."""
+    h = _check_dns(snap, origin_id, target_id, subresource)
+    h.caveats.append(APP_SETTINGS_CAVEAT)
+    return h
+
+
+def _check_dns(snap: Snapshot, origin_id: str, target_id: str, subresource: str) -> Hop:
     origin = snap.get(origin_id)
     target = snap.get(target_id)
     if origin is None or target is None:
@@ -108,16 +136,15 @@ def check_dns(snap: Snapshot, origin_id: str, target_id: str, subresource: str) 
 
     zones = [z for z in snap.of_type(ZONES) if norm(z.get("name")) == zone_name]
     if not zones:
-        if snap.has_unreadable_scope:
-            return _amber("DNS_ZONE_NOT_VISIBLE",
-                          f"Zone {zone_name} is not in the readable scope; part of the scope is not readable.",
-                          "A subscription or scope that may hold the zone (for example a hub) is not readable.",
-                          fqdn, [evidence("visibility", "unreadable", (snap.data.get("visibility") or {}).get("unreadable"), "declared")],
-                          [SRC_ARG])
+        gap = _visibility_gap(snap, zone_name, fqdn, [])
+        if gap is not None:
+            return gap
         return Hop("dns", RED, "DNS_ZONE_MISSING",
-                   f"Zone {zone_name} does not exist in any readable subscription and no custom DNS server is used: "
-                   f"{fqdn} resolves to its public IP.",
-                   [evidence("snapshot", "resources[type=privatednszones]", [])], [SRC_ARG, SRC_ZONES])
+                   f"Zone {zone_name} does not exist in any subscription the snapshot declares as read and no custom "
+                   f"DNS server is used: {fqdn} resolves to its public IP.",
+                   [evidence("snapshot", "resources[type=privatednszones]", []),
+                    evidence("visibility", "unreadable", (snap.data.get("visibility") or {}).get("unreadable"), "declared")],
+                   [SRC_ARG, SRC_ZONES])
 
     linked = []
     for z in zones:
@@ -126,11 +153,14 @@ def check_dns(snap: Snapshot, origin_id: str, target_id: str, subresource: str) 
                 linked.append((z, l))
     if not linked:
         z0 = zones[0]
+        ev_links = [evidence(z0["id"], "virtualNetworkLinks", [_vn(l) for l in _links_of(snap, z0)])]
+        gap = _visibility_gap(snap, zone_name, fqdn, ev_links)
+        if gap is not None:
+            return gap
         return Hop("dns", RED, "DNS_ZONE_NOT_LINKED",
                    f"Zone {zone_name} is not linked to {vnet['name']} (integration VNet of {origin['name']}): "
                    f"{fqdn} resolves to its public IP.",
-                   [evidence(z0["id"], "virtualNetworkLinks", [_vn(l) for l in _links_of(snap, z0)])],
-                   [SRC_ZONES])
+                   ev_links, [SRC_ZONES])
     if len(linked) > 1:
         return _incomplete(f"more than one zone named {zone_name} is linked to the integration VNet", fqdn)
     zone, link = linked[0]
@@ -170,9 +200,7 @@ def check_dns(snap: Snapshot, origin_id: str, target_id: str, subresource: str) 
                    ev + [evidence(pe["id"], "properties.customDnsConfigs[0].ipAddresses", pe_ips)], [SRC_ZONES])
     return Hop("dns", GREEN, None,
                f"{fqdn} resolves through zone {zone_name} (linked to {vnet['name']}) to the endpoint IP {pe_ips[0]}.",
-               ev + [evidence(pe["id"], "properties.customDnsConfigs[0].ipAddresses", pe_ips)], [SRC_ZONES],
-               caveats=["App settings WEBSITE_DNS_SERVER and WEBSITE_DNS_ALT_SERVER are not readable with Reader; "
-                        "only the site property dnsConfiguration was checked."])
+               ev + [evidence(pe["id"], "properties.customDnsConfigs[0].ipAddresses", pe_ips)], [SRC_ZONES])
 
 
 def _vn(link: dict) -> str | None:

@@ -38,6 +38,12 @@ class Snapshot:
         return [r for r in self.resources if norm(r.get("type")) == rtype]
 
     @property
+    def visibility_declared(self) -> bool:
+        """True if the snapshot says which subscriptions were read and which scopes were not."""
+        vis = self.data.get("visibility") or {}
+        return bool(vis.get("subscriptions")) and isinstance(vis.get("unreadable"), list)
+
+    @property
     def has_unreadable_scope(self) -> bool:
         vis = self.data.get("visibility") or {}
         if vis.get("unreadable"):

@@ -19,6 +19,10 @@ class Hop:
     why_unverifiable: str | None = None
     how_to_verify: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.code is not None and not self.sources:
+            raise ValueError(f"verdict code {self.code} must cite at least one source")
+
     def to_dict(self) -> dict:
         d: dict = {"id": self.id, "state": self.state, "code": self.code, "cause": self.cause,
                    "evidence": self.evidence, "sources": self.sources}

@@ -1,7 +1,8 @@
 """Runs the engine over every corpus case and compares it with expected.json.
 
-The engine is partial (origin and dns hops only), so hops it does not implement are skipped, and
-`overall` is compared over the implemented hops only (see docs/design.md, Corpus)."""
+The engine is partial (origin and dns hops only), so hops it does not implement are skipped.
+`overall` is compared as the engine reports it: over the evaluated hops, and never green while
+`complete` is false (see docs/design.md, Corpus)."""
 import json
 
 import pytest
@@ -13,7 +14,7 @@ CASES = sorted(p.name for p in CORPUS.iterdir() if (p / "snapshot.json").exists(
 
 
 def test_corpus_not_empty():
-    assert len(CASES) >= 9
+    assert len(CASES) >= 11
 
 
 @pytest.mark.parametrize("case", CASES)
@@ -32,8 +33,7 @@ def test_case_matches_expected(case):
     for hop_id in want.get("mustNotBeGreen", []):
         if hop_id in got:
             assert got[hop_id]["state"] != "green", f"{case}: {hop_id} must not be green"
-    if want["overall"] == "red" or all(h in asserted for h in IMPLEMENTED) or want.get("firstRedHop") is None:
-        assert verdict["overall"] == want["overall"], case
+    assert verdict["overall"] == want["overall"], case
     assert verdict["firstRedHop"] == want.get("firstRedHop"), case
 
 

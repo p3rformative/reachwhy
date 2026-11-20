@@ -11,6 +11,9 @@ CORPUS = ROOT / "corpus"
 SUBRESOURCE = "blob"
 
 
+CASES = sorted(p.name for p in CORPUS.iterdir() if (p / "snapshot.json").exists())
+
+
 def load_case(case_id: str) -> tuple[dict, dict]:
     d = CORPUS / case_id
     return (json.loads((d / "snapshot.json").read_text(encoding="utf-8")),

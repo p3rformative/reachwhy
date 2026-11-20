@@ -147,3 +147,55 @@ def test_verdict_is_marked_partial(demo_case):
     assert v["complete"] is False
     assert set(v["evaluatedHops"]) == {"origin", "dns"}
     assert "rbac" in v["notEvaluated"]
+
+
+def test_every_dns_verdict_carries_the_app_settings_caveat(demo_case, hub_case):
+    """Red and amber included: Reader cannot read WEBSITE_DNS_SERVER / WEBSITE_DNS_ALT_SERVER."""
+    from reachwhy.rules_dns import APP_SETTINGS_CAVEAT
+    snap, exp = demo_case
+    red = hop(run(snap, exp), "dns")
+    assert red["state"] == "red" and APP_SETTINGS_CAVEAT in red["caveats"]
+    assert "assumes they are not set" in APP_SETTINGS_CAVEAT
+    resource(snap, "microsoft.network/virtualnetworks")["properties"]["dhcpOptions"]["dnsServers"] = ["10.20.9.4"]
+    amber = hop(run(snap, exp), "dns")
+    assert amber["state"] == "amber" and APP_SETTINGS_CAVEAT in amber["caveats"]
+    snap, exp = hub_case
+    green = hop(run(snap, exp), "dns")
+    assert green["state"] == "green" and green["caveats"] == [APP_SETTINGS_CAVEAT]
+    del snap["resources"][:]
+    assert hop(run(snap, exp), "dns")["caveats"] == [APP_SETTINGS_CAVEAT]
+
+
+def test_not_linked_is_amber_when_a_scope_is_unreadable(demo_case):
+    snap, exp = demo_case
+    snap["visibility"]["unreadable"] = ["hub-scope-demo"]
+    h = hop(run(snap, exp), "dns")
+    assert (h["state"], h["code"]) == ("amber", "DNS_ZONE_NOT_VISIBLE")
+    assert h["whyUnverifiable"] and h["howToVerify"]
+
+
+def test_not_linked_is_amber_when_a_subscription_is_flagged_unreadable(demo_case):
+    snap, exp = demo_case
+    snap["visibility"]["subscriptions"][0]["readable"] = False
+    assert hop(run(snap, exp), "dns")["code"] == "DNS_ZONE_NOT_VISIBLE"
+
+
+def test_missing_zone_needs_declared_visibility(demo_case):
+    snap, exp = demo_case
+    snap["resources"] = [r for r in snap["resources"] if not r["type"].startswith("microsoft.network/privatednszones")]
+    assert hop(run(snap, exp), "dns")["code"] == "DNS_ZONE_MISSING"
+    for broken in ({}, {"subscriptions": []}, {"subscriptions": [{"id": "x", "readable": True}]}, {"unreadable": []}):
+        snap["visibility"] = broken
+        h = hop(run(snap, exp), "dns")
+        assert (h["state"], h["code"]) == ("amber", "DNS_ZONE_NOT_VISIBLE"), broken
+    del snap["visibility"]
+    assert hop(run(snap, exp), "dns")["state"] == "amber"
+
+
+def test_not_linked_needs_declared_visibility(demo_case):
+    snap, exp = demo_case
+    assert hop(run(snap, exp), "dns")["code"] == "DNS_ZONE_NOT_LINKED"
+    del snap["visibility"]
+    h = hop(run(snap, exp), "dns")
+    assert (h["state"], h["code"]) == ("amber", "DNS_ZONE_NOT_VISIBLE")
+    assert "does not declare" in h["whyUnverifiable"]

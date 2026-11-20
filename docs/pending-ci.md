@@ -21,7 +21,7 @@ Previsto en [ROADMAP.md](../ROADMAP.md):
 | `dependency-review` | Revisión de dependencias del PR (requiere activar el Dependency graph en el repo). |
 | `rust-advisories` | `cargo deny` y `cargo audit` con baseline vacío (cuando exista código Rust). |
 | `javascript-audit` | `pnpm audit` con baseline (cuando exista la UI). |
-| `corpus` | Tests de corpus contra el motor y validación de `schemas/*.json`. Ya existe el prototipo en Python (`python -m pytest`, 49 tests en `tests/`), pero el CI activo no lo ejecuta: agregarlo es un cambio de workflow y requiere aprobación del mantenedor. |
+| `corpus` | Tests de corpus contra el motor y validación de `schemas/*.json`. Ya existe el prototipo en Python (`python -m pytest`, 77 tests en `tests/`), pero el CI activo no lo ejecuta: agregarlo es un cambio de workflow y requiere aprobación del mantenedor. |
 | Dependabot | Mensual (npm, cargo, github-actions), límite de 2 PR abiertos. |
 
 Antes de activarlos: volver a verificar versiones y SHA de acciones y herramientas contra las fuentes oficiales.

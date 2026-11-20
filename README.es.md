@@ -83,7 +83,7 @@ Detalle y lista completa de lo que queda fuera: [docs/design.md](docs/design.md#
 | Orígenes | ninguno (sin código) | Function App, App Service, Container App |
 | Destinos | ninguno (sin código) | Storage (blob, file, queue, table, dfs), Key Vault, Azure SQL Database, todos detrás de un private endpoint |
 | Formatos | JSON Schema del snapshot y del veredicto esperado (v1.0.0) | importar evidencia en ejecución (`evidence.runtime`, ya es un campo opcional del esquema) |
-| Corpus de pruebas | 9 casos sintéticos (`demo-basic-01` y 8 de la fase 1) | más casos sintéticos reconstruidos desde artículos públicos de troubleshooting |
+| Corpus de pruebas | 11 casos sintéticos (`demo-basic-01` y 10 de la fase 1) | más casos sintéticos reconstruidos desde artículos públicos de troubleshooting |
 | Prototipo de análisis | Python: salto dns y enrutamiento de la aplicación sobre un snapshot local (fase 1) | los demás saltos, luego el motor en Rust |
 | Herramientas | gitleaks e higiene de datos en CI y pre-commit | tests del motor sobre el corpus en CI |
 
@@ -117,21 +117,49 @@ python scripts/ci/check_hygiene.py corpus schemas docs
 gitleaks git --no-banner --redact --config .gitleaks.toml .
 ```
 
-Prototipo de la fase 1 (Python 3.12+, `pytest` para los tests; solo lee archivos locales):
+Prototipo de la fase 1 (Python 3.12+; solo lee archivos locales, sin red ni acceso a Azure). Se ejecuta desde la raíz del repositorio de dos maneras:
 
 ```sh
-python -m pip install pytest jsonschema
-python -m pytest
-PYTHONPATH=src python -m reachwhy --case corpus/synthetic-dns-fallback-01
+# Bash: opción 1, sin instalar (desde la raíz del repo)
+PYTHONPATH=src python3 -m reachwhy --case corpus/synthetic-dns-fallback-01
+
+# Bash: opción 2, instalación editable (agrega el comando `reachwhy`)
+python3 -m pip install -e .
+reachwhy --case corpus/synthetic-dns-fallback-01
+reachwhy ruta/al/snapshot.json --origin <id-origen> --target <id-destino> --subresource blob
+
+# tests
+python3 -m pip install pytest jsonschema
+python3 -m pytest
 ```
 
 ```powershell
+# PowerShell: opción 1, sin instalar (desde la raíz del repo)
+$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
+
+# PowerShell: opción 2, instalación editable (agrega el comando `reachwhy`)
+python -m pip install -e .
+reachwhy --case corpus/synthetic-dns-fallback-01
+
+# tests
 python -m pip install pytest jsonschema
 python -m pytest
-$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
 ```
 
-El veredicto es JSON con `complete: false`: solo se evalúan los saltos `origin` (enrutamiento de la aplicación) y `dns`. El CI todavía no ejecuta estos tests (ver [docs/pending-ci.md](docs/pending-ci.md)).
+Desde Python (después de `pip install -e .`, o con `src` en `PYTHONPATH`):
+
+```python
+import json
+from reachwhy import analyze
+
+case = "corpus/synthetic-dns-fallback-01"
+snapshot = json.load(open(f"{case}/snapshot.json", encoding="utf-8"))
+pair = json.load(open(f"{case}/expected.json", encoding="utf-8"))["pair"]
+verdict = analyze(snapshot, pair["origin"], pair["target"], pair["targetSubresource"])
+print(verdict["overall"], verdict["summary"])
+```
+
+El comando imprime el veredicto como JSON y termina con código 1 si el veredicto global es rojo, y 0 en otro caso. El veredicto siempre es parcial (`complete: false`): solo se evalúan los saltos `origin` (enrutamiento de la aplicación) y `dns`, así que `overall` nunca es `green`: si no se encuentra una falla es `amber`, y `summary` dice "2 of 7 hops evaluated". Todo veredicto de `dns` lleva la salvedad de que las app settings `WEBSITE_DNS_SERVER` y `WEBSITE_DNS_ALT_SERVER` no son legibles con Reader. El CI todavía no ejecuta estos tests (ver [docs/pending-ci.md](docs/pending-ci.md)).
 
 Todo dato del repo es sintético: IPs solo en `10.20.0.0/16` y rangos de documentación, nombres con `demo` o `example`, GUID de ceros. Los snapshots crudos o reales (`*.raw.json`, `*.real.json`, `snapshots/`) están en `.gitignore` y el hook los rechaza.
 

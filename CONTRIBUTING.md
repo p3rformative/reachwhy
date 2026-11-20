@@ -17,7 +17,7 @@ bash:
 scripts/install-hooks.sh
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
-python -m pip install pytest jsonschema   # prototype tests
+python -m pip install -e '.[test]'   # prototype tests (pytest, jsonschema)
 python -m pytest
 ```
 
@@ -27,7 +27,7 @@ PowerShell:
 ./scripts/install-hooks.ps1
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
-python -m pip install pytest jsonschema   # prototype tests
+python -m pip install -e '.[test]'   # prototype tests (pytest, jsonschema)
 python -m pytest
 ```
 
@@ -53,7 +53,7 @@ Enforced by `scripts/ci/check_hygiene.py`:
 ## Pull requests
 
 - One topic per PR, with a clear description of what changes and why.
-- CI (`gitleaks` and `hygiene`) must pass.
+- CI (`gitleaks`, `hygiene` and `tests`) must pass.
 - Changes to `.github/workflows/` need a justification in the PR and a maintainer review.
 - Report security issues privately, not in a PR or issue: see [SECURITY.md](SECURITY.md).
 

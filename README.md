@@ -85,7 +85,7 @@ Details and the full out-of-scope list: [docs/design.md](docs/design.md#out-of-s
 | Data formats | snapshot and expected-verdict JSON Schemas (v1.0.0) | runtime evidence import (`evidence.runtime`, already an optional schema field) |
 | Test corpus | 11 synthetic cases (`demo-basic-01` and 10 for phase 1) | more synthetic cases reconstructed from public troubleshooting articles |
 | Analysis prototype | Python: dns hop and application routing over a local snapshot (phase 1) | the other hops, then the Rust engine |
-| Tooling | gitleaks and data-hygiene checks in CI and pre-commit | engine tests over the corpus in CI |
+| Tooling | gitleaks and data-hygiene checks in CI and pre-commit; prototype tests (pytest) in CI | Rust engine tests over the corpus in CI |
 
 See [ROADMAP.md](ROADMAP.md).
 
@@ -129,7 +129,7 @@ reachwhy --case corpus/synthetic-dns-fallback-01
 reachwhy path/to/snapshot.json --origin <origin-id> --target <target-id> --subresource blob
 
 # tests
-python3 -m pip install pytest jsonschema
+python3 -m pip install -e '.[test]'   # pytest and jsonschema
 python3 -m pytest
 ```
 
@@ -142,7 +142,7 @@ python -m pip install -e .
 reachwhy --case corpus/synthetic-dns-fallback-01
 
 # tests
-python -m pip install pytest jsonschema
+python -m pip install -e '.[test]'   # pytest and jsonschema
 python -m pytest
 ```
 
@@ -159,7 +159,7 @@ verdict = analyze(snapshot, pair["origin"], pair["target"], pair["targetSubresou
 print(verdict["overall"], verdict["summary"])
 ```
 
-The command prints the verdict as JSON and exits with 1 if the overall verdict is red, 0 otherwise. The verdict is always partial (`complete: false`): only the `origin` (application routing) and `dns` hops are evaluated, so `overall` is never `green`: with no failure found it is `amber`, and `summary` says "2 of 7 hops evaluated". Every `dns` verdict carries the caveat that app settings `WEBSITE_DNS_SERVER` and `WEBSITE_DNS_ALT_SERVER` are not readable with Reader. CI does not run these tests yet (see [docs/pending-ci.md](docs/pending-ci.md)).
+The command prints the verdict as JSON and exits with 1 if the overall verdict is red, 0 otherwise. The verdict is always partial (`complete: false`): only the `origin` (application routing) and `dns` hops are evaluated, so `overall` is never `green`: with no failure found it is `amber`, and `summary` says "2 of 7 hops evaluated". Every `dns` verdict carries the caveat that app settings `WEBSITE_DNS_SERVER` and `WEBSITE_DNS_ALT_SERVER` are not readable with Reader. CI runs these tests in the `tests` job (see [docs/pending-ci.md](docs/pending-ci.md)).
 
 All data in this repo is synthetic: IPs only in `10.20.0.0/16` and documentation ranges, names containing `demo` or `example`, all-zero GUIDs. Raw or real snapshots (`*.raw.json`, `*.real.json`, `snapshots/`) are git-ignored and rejected by the hook.
 

@@ -1,0 +1,172 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "reachwhy.snapshot",
+  "id": "synthetic-route-all-off-01",
+  "synthetic": true,
+  "collectedAt": "2026-11-12T12:00:00Z",
+  "collector": {
+    "name": "reachwhy-collector",
+    "version": "0.1.0",
+    "mode": "arg"
+  },
+  "visibility": {
+    "subscriptions": [
+      {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "readable": true
+      }
+    ],
+    "unreadable": []
+  },
+  "resources": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+      "type": "microsoft.web/sites",
+      "name": "func-demo",
+      "kind": "functionapp,linux",
+      "location": "eastus",
+      "identity": {
+        "type": "SystemAssigned",
+        "principalId": "00000000-0000-0000-0000-0000000000a1"
+      },
+      "properties": {
+        "virtualNetworkSubnetId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/virtualnetworks/vnet-demo/subnets/snet-func-demo",
+        "publicNetworkAccess": "Enabled",
+        "outboundVnetRouting": {
+          "allTraffic": false
+        }
+      }
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+      "type": "microsoft.storage/storageaccounts",
+      "name": "stdemo001",
+      "location": "eastus",
+      "properties": {
+        "publicNetworkAccess": "Disabled",
+        "networkAcls": {
+          "defaultAction": "Deny"
+        },
+        "primaryEndpoints": {
+          "blob": "https://stdemo001.blob.core.windows.net/"
+        },
+        "privateEndpointConnections": [
+          {
+            "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001/privateendpointconnections/pe-st-demo-blob",
+            "properties": {
+              "privateEndpoint": {
+                "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/privateendpoints/pe-st-demo-blob"
+              },
+              "privateLinkServiceConnectionState": {
+                "status": "Approved"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/privateendpoints/pe-st-demo-blob",
+      "type": "microsoft.network/privateendpoints",
+      "name": "pe-st-demo-blob",
+      "properties": {
+        "provisioningState": "Succeeded",
+        "subnet": {
+          "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/virtualnetworks/vnet-demo/subnets/snet-pe-demo"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "properties": {
+              "privateLinkServiceId": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+              "groupIds": [
+                "blob"
+              ],
+              "privateLinkServiceConnectionState": {
+                "status": "Approved"
+              }
+            }
+          }
+        ],
+        "customDnsConfigs": [
+          {
+            "fqdn": "stdemo001.blob.core.windows.net",
+            "ipAddresses": [
+              "10.20.2.4"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/virtualnetworks/vnet-demo",
+      "type": "microsoft.network/virtualnetworks",
+      "name": "vnet-demo",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.20.0.0/16"
+          ]
+        },
+        "dhcpOptions": {
+          "dnsServers": []
+        },
+        "virtualNetworkPeerings": [],
+        "subnets": [
+          {
+            "name": "snet-func-demo",
+            "properties": {
+              "addressPrefix": "10.20.1.0/24",
+              "delegations": [
+                {
+                  "properties": {
+                    "serviceName": "Microsoft.Web/serverFarms"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "snet-pe-demo",
+            "properties": {
+              "addressPrefix": "10.20.2.0/24",
+              "privateEndpointNetworkPolicies": "Disabled"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/privatednszones/privatelink.blob.core.windows.net",
+      "type": "microsoft.network/privatednszones",
+      "name": "privatelink.blob.core.windows.net",
+      "properties": {
+        "numberOfVirtualNetworkLinks": 0,
+        "numberOfRecordSets": 2
+      },
+      "virtualNetworkLinks": [],
+      "recordSets": [
+        {
+          "type": "A",
+          "name": "stdemo001",
+          "ttl": 10,
+          "aRecords": [
+            "10.20.2.4"
+          ]
+        }
+      ]
+    }
+  ],
+  "roleAssignments": [],
+  "roleDefinitions": [
+    {
+      "id": "/providers/microsoft.authorization/roledefinitions/00000000-0000-0000-0000-0000000000b1",
+      "name": "Storage Blob Data Contributor"
+    }
+  ],
+  "declared": {
+    "dnsForwarders": [],
+    "notes": [
+      "Demo sintética: no corresponde a ningún entorno real."
+    ]
+  }
+}

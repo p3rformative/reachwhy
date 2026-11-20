@@ -11,16 +11,16 @@ Read-only, hop-by-hop diagnosis for Azure: DNS, network and RBAC.
 ![read-only](https://img.shields.io/badge/Azure%20access-read--only-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **Status: pre-alpha.** There is no application code yet. Today the repo contains the design, the JSON schemas, one synthetic test case and the data-hygiene tooling. Everything below that describes the app is the planned behavior, and it is labeled as such.
+> **Status: pre-alpha.** There is no application yet: no desktop UI and no collector for Azure. Today the repo contains the design, the JSON schemas, synthetic test cases, the data-hygiene tooling and a Python prototype that analyzes a local snapshot file for the dns hop and application routing (phase 1, in a pull request). Everything below that describes the app is the planned behavior, and it is labeled as such.
 
 ## Demo
 
-There is no GIF or screenshot yet, because there is nothing to run. This is the **planned output** for the synthetic case [`corpus/demo-basic-01`](corpus/demo-basic-01). The hop states and codes come from that case's [`expected.json`](corpus/demo-basic-01/expected.json); hops the case does not assert are shown as `·`.
+There is no GIF or screenshot yet, because the app does not exist. This is the **planned output** for the synthetic case [`corpus/demo-basic-01`](corpus/demo-basic-01). The hop states and codes come from that case's [`expected.json`](corpus/demo-basic-01/expected.json); hops the case does not assert are shown as `·`.
 
 *It's always DNS. Except when it's also RBAC.*
 
 ```text
-# synthetic example, planned output (not produced by any code yet)
+# synthetic example, planned output (the Python prototype evaluates only the origin routing and dns hops so far)
 origin  func-demo  (Function App, VNet integration: snet-func-demo)
 target  stdemo001  (Storage, blob, private endpoint pe-st-demo-blob)
 
@@ -83,8 +83,9 @@ Details and the full out-of-scope list: [docs/design.md](docs/design.md#out-of-s
 | Origins | none (no code) | Function App, App Service, Container App |
 | Targets | none (no code) | Storage (blob, file, queue, table, dfs), Key Vault, Azure SQL Database, all behind a private endpoint |
 | Data formats | snapshot and expected-verdict JSON Schemas (v1.0.0) | runtime evidence import (`evidence.runtime`, already an optional schema field) |
-| Test corpus | 1 synthetic case (`demo-basic-01`) | more synthetic cases reconstructed from public troubleshooting articles |
-| Tooling | gitleaks and data-hygiene checks in CI and pre-commit | engine tests over the corpus |
+| Test corpus | 11 synthetic cases (`demo-basic-01` and 10 for phase 1) | more synthetic cases reconstructed from public troubleshooting articles |
+| Analysis prototype | Python: dns hop and application routing over a local snapshot (phase 1) | the other hops, then the Rust engine |
+| Tooling | gitleaks and data-hygiene checks in CI and pre-commit; prototype tests (pytest) in CI | Rust engine tests over the corpus in CI |
 
 See [ROADMAP.md](ROADMAP.md).
 
@@ -115,6 +116,50 @@ python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
 gitleaks git --no-banner --redact --config .gitleaks.toml .
 ```
+
+Phase 1 prototype (Python 3.12+; it only reads local files, with no network and no Azure access). Run it from the repository root in one of two ways:
+
+```sh
+# Bash: option 1, no install (from the repo root)
+PYTHONPATH=src python3 -m reachwhy --case corpus/synthetic-dns-fallback-01
+
+# Bash: option 2, editable install (adds the `reachwhy` command)
+python3 -m pip install -e .
+reachwhy --case corpus/synthetic-dns-fallback-01
+reachwhy path/to/snapshot.json --origin <origin-id> --target <target-id> --subresource blob
+
+# tests
+python3 -m pip install -e '.[test]'   # pytest and jsonschema
+python3 -m pytest
+```
+
+```powershell
+# PowerShell: option 1, no install (from the repo root)
+$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
+
+# PowerShell: option 2, editable install (adds the `reachwhy` command)
+python -m pip install -e .
+reachwhy --case corpus/synthetic-dns-fallback-01
+
+# tests
+python -m pip install -e '.[test]'   # pytest and jsonschema
+python -m pytest
+```
+
+From Python (after `pip install -e .`, or with `src` on `PYTHONPATH`):
+
+```python
+import json
+from reachwhy import analyze
+
+case = "corpus/synthetic-dns-fallback-01"
+snapshot = json.load(open(f"{case}/snapshot.json", encoding="utf-8"))
+pair = json.load(open(f"{case}/expected.json", encoding="utf-8"))["pair"]
+verdict = analyze(snapshot, pair["origin"], pair["target"], pair["targetSubresource"])
+print(verdict["overall"], verdict["summary"])
+```
+
+The command prints the verdict as JSON and exits with 1 if the overall verdict is red, 0 otherwise. The verdict is always partial (`complete: false`): only the `origin` (application routing) and `dns` hops are evaluated, so `overall` is never `green`: with no failure found it is `amber`, and `summary` says "2 of 7 hops evaluated". Every `dns` verdict carries the caveat that app settings `WEBSITE_DNS_SERVER` and `WEBSITE_DNS_ALT_SERVER` are not readable with Reader. CI runs these tests in the `tests` job (see [docs/pending-ci.md](docs/pending-ci.md)).
 
 All data in this repo is synthetic: IPs only in `10.20.0.0/16` and documentation ranges, names containing `demo` or `example`, all-zero GUIDs. Raw or real snapshots (`*.raw.json`, `*.real.json`, `snapshots/`) are git-ignored and rejected by the hook.
 

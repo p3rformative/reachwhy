@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "synthetic-route-all-off-dns-ok-01",
+  "minRulesetVersion": "0.1.0",
+  "source": {
+    "type": "synthetic",
+    "url": "https://learn.microsoft.com/en-us/azure/app-service/configure-vnet-integration-routing",
+    "title": "Configure virtual network integration routing",
+    "readOn": "2026-11-19",
+    "license": {
+      "mode": "reconstructed-own-data",
+      "quote": false,
+      "spdx": null,
+      "evidence": null,
+      "checkedOn": null
+    }
+  },
+  "pair": {
+    "origin": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+    "target": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+    "targetSubresource": "blob"
+  },
+  "expected": {
+    "overall": "amber",
+    "firstRedHop": null,
+    "hops": {
+      "origin": {
+        "state": "green"
+      },
+      "dns": {
+        "state": "green"
+      }
+    },
+    "mustNotBeGreen": []
+  },
+  "reviewedBy": "pendiente",
+  "notes": "Enrutamiento de aplicacion apagado pero el nombre resuelve a la IP privada del endpoint (trafico RFC1918 entra a la VNet): sin falla detectada. Datos 100 % sinteticos. El motor es parcial: overall se calcula solo sobre los saltos evaluados (origin, dns) y nunca es green mientras complete sea false (un verde se degrada a amber)."
+}

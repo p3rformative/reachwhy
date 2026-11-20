@@ -85,7 +85,7 @@ Detalle y lista completa de lo que queda fuera: [docs/design.md](docs/design.md#
 | Formatos | JSON Schema del snapshot y del veredicto esperado (v1.0.0) | importar evidencia en ejecución (`evidence.runtime`, ya es un campo opcional del esquema) |
 | Corpus de pruebas | 11 casos sintéticos (`demo-basic-01` y 10 de la fase 1) | más casos sintéticos reconstruidos desde artículos públicos de troubleshooting |
 | Prototipo de análisis | Python: salto dns y enrutamiento de la aplicación sobre un snapshot local (fase 1) | los demás saltos, luego el motor en Rust |
-| Herramientas | gitleaks e higiene de datos en CI y pre-commit | tests del motor sobre el corpus en CI |
+| Herramientas | gitleaks e higiene de datos en CI y pre-commit; tests del prototipo (pytest) en CI | tests del motor en Rust sobre el corpus en CI |
 
 Ver [ROADMAP.md](ROADMAP.md).
 
@@ -129,7 +129,7 @@ reachwhy --case corpus/synthetic-dns-fallback-01
 reachwhy ruta/al/snapshot.json --origin <id-origen> --target <id-destino> --subresource blob
 
 # tests
-python3 -m pip install pytest jsonschema
+python3 -m pip install -e '.[test]'   # pytest y jsonschema
 python3 -m pytest
 ```
 
@@ -142,7 +142,7 @@ python -m pip install -e .
 reachwhy --case corpus/synthetic-dns-fallback-01
 
 # tests
-python -m pip install pytest jsonschema
+python -m pip install -e '.[test]'   # pytest y jsonschema
 python -m pytest
 ```
 
@@ -159,7 +159,7 @@ verdict = analyze(snapshot, pair["origin"], pair["target"], pair["targetSubresou
 print(verdict["overall"], verdict["summary"])
 ```
 
-El comando imprime el veredicto como JSON y termina con código 1 si el veredicto global es rojo, y 0 en otro caso. El veredicto siempre es parcial (`complete: false`): solo se evalúan los saltos `origin` (enrutamiento de la aplicación) y `dns`, así que `overall` nunca es `green`: si no se encuentra una falla es `amber`, y `summary` dice "2 of 7 hops evaluated". Todo veredicto de `dns` lleva la salvedad de que las app settings `WEBSITE_DNS_SERVER` y `WEBSITE_DNS_ALT_SERVER` no son legibles con Reader. El CI todavía no ejecuta estos tests (ver [docs/pending-ci.md](docs/pending-ci.md)).
+El comando imprime el veredicto como JSON y termina con código 1 si el veredicto global es rojo, y 0 en otro caso. El veredicto siempre es parcial (`complete: false`): solo se evalúan los saltos `origin` (enrutamiento de la aplicación) y `dns`, así que `overall` nunca es `green`: si no se encuentra una falla es `amber`, y `summary` dice "2 of 7 hops evaluated". Todo veredicto de `dns` lleva la salvedad de que las app settings `WEBSITE_DNS_SERVER` y `WEBSITE_DNS_ALT_SERVER` no son legibles con Reader. El CI ejecuta estos tests en el job `tests` (ver [docs/pending-ci.md](docs/pending-ci.md)).
 
 Todo dato del repo es sintético: IPs solo en `10.20.0.0/16` y rangos de documentación, nombres con `demo` o `example`, GUID de ceros. Los snapshots crudos o reales (`*.raw.json`, `*.real.json`, `snapshots/`) están en `.gitignore` y el hook los rechaza.
 

@@ -7,7 +7,7 @@ Everything below is **planned**. None of it exists yet unless it is listed under
 - JSON Schemas for the snapshot and for the expected verdict (`schemas/`, v1.0.0), including the optional `evidence.runtime` field.
 - First synthetic corpus case: `corpus/demo-basic-01` (DNS zone not linked to the integration VNet, no data role).
 - Synthetic-data hygiene check with tests, pre-commit hook and pinned gitleaks, enforced in CI.
-- Phase 1 prototype in Python (`src/reachwhy/`, `tests/`): dns hop (fallback to internet, site and VNet DNS servers, zones in other subscriptions) and origin application routing, over a local snapshot, with 10 more synthetic corpus cases. *In a pull request; not run against real Azure data (there is no collector yet).*
+- Phase 1 prototype in Python (`src/reachwhy/`, `tests/`): dns hop (fallback to internet, site and VNet DNS servers, zones in other subscriptions) and origin application routing, over a local snapshot, with 10 more synthetic corpus cases. *In a pull request; its pytest suite runs in the `tests` CI job; not run against real Azure data (there is no collector yet).*
 
 ## Next: first usable version
 
@@ -19,7 +19,7 @@ Scope: Azure only, 3 origins × 3 targets (see [docs/design.md](docs/design.md))
 - [ ] Read-only collector using the user's `az login` (Resource Graph and ARM GETs only), writing snapshots outside any git repository.
 - [ ] Desktop UI (Tauri) with a demo mode on synthetic data, no Azure session needed.
 - [ ] Demo recording made from synthetic data only.
-- [ ] CI for Rust and JavaScript dependencies and corpus tests (see [docs/pending-ci.md](docs/pending-ci.md)).
+- [ ] CI for Rust and JavaScript dependencies and Rust-engine corpus tests (see [docs/pending-ci.md](docs/pending-ci.md)).
 
 ## Planned improvements (by phase)
 

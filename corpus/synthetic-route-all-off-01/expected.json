@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "synthetic-route-all-off-01",
+  "minRulesetVersion": "0.1.0",
+  "source": {
+    "type": "synthetic",
+    "url": "https://learn.microsoft.com/en-us/azure/app-service/configure-vnet-integration-routing",
+    "title": "Configure virtual network integration routing",
+    "readOn": "2026-11-19",
+    "license": {
+      "mode": "reconstructed-own-data",
+      "quote": false,
+      "spdx": null,
+      "evidence": null,
+      "checkedOn": null
+    }
+  },
+  "pair": {
+    "origin": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+    "target": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+    "targetSubresource": "blob"
+  },
+  "expected": {
+    "overall": "red",
+    "firstRedHop": "dns",
+    "hops": {
+      "origin": {
+        "state": "amber",
+        "code": "ORIGIN_ROUTE_ALL_OFF"
+      },
+      "dns": {
+        "state": "red",
+        "code": "DNS_ZONE_NOT_LINKED"
+      }
+    },
+    "mustNotBeGreen": [
+      "origin"
+    ]
+  },
+  "reviewedBy": "pendiente",
+  "notes": "Enrutamiento de aplicacion apagado (outboundVnetRouting.allTraffic=false) y el nombre no resuelve a IP privada: origin ambar, dns rojo. Datos 100 % sinteticos. Mientras el motor este incompleto, overall se calcula solo sobre los saltos implementados (origin, dns)."
+}

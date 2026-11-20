@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "synthetic-dns-hub-not-visible-01",
+  "minRulesetVersion": "0.1.0",
+  "source": {
+    "type": "synthetic",
+    "url": "https://learn.microsoft.com/en-us/azure/dns/private-dns-arg",
+    "title": "Private DNS information in Azure Resource Graph",
+    "readOn": "2026-11-19",
+    "license": {
+      "mode": "reconstructed-own-data",
+      "quote": false,
+      "spdx": null,
+      "evidence": null,
+      "checkedOn": null
+    }
+  },
+  "pair": {
+    "origin": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+    "target": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+    "targetSubresource": "blob"
+  },
+  "expected": {
+    "overall": "amber",
+    "firstRedHop": null,
+    "hops": {
+      "dns": {
+        "state": "amber",
+        "code": "DNS_ZONE_NOT_VISIBLE"
+      }
+    },
+    "mustNotBeGreen": [
+      "dns"
+    ]
+  },
+  "reviewedBy": "pendiente",
+  "notes": "La zona no esta en el snapshot y la suscripcion hub no es legible: ambar, nunca rojo. Datos 100 % sinteticos. Mientras el motor este incompleto, overall se calcula solo sobre los saltos implementados (origin, dns)."
+}

@@ -34,5 +34,5 @@
     ]
   },
   "reviewedBy": "pendiente",
-  "notes": "El sitio define dnsConfiguration.dnsServers (anula el DNS de la VNet): la cadena no se puede evaluar, ambar aunque la zona no este enlazada. Datos 100 % sinteticos. Mientras el motor este incompleto, overall se calcula solo sobre los saltos implementados (origin, dns)."
+  "notes": "El sitio define dnsConfiguration.dnsServers (anula el DNS de la VNet): la cadena no se puede evaluar, ambar aunque la zona no este enlazada. Datos 100 % sinteticos. El motor es parcial: overall se calcula solo sobre los saltos evaluados (origin, dns) y nunca es green mientras complete sea false (un verde se degrada a amber)."
 }

@@ -21,7 +21,7 @@
     "targetSubresource": "blob"
   },
   "expected": {
-    "overall": "green",
+    "overall": "amber",
     "firstRedHop": null,
     "hops": {
       "origin": {
@@ -34,5 +34,5 @@
     "mustNotBeGreen": []
   },
   "reviewedBy": "pendiente",
-  "notes": "Enrutamiento de aplicacion apagado pero el nombre resuelve a la IP privada del endpoint (trafico RFC1918 entra a la VNet): sin falla detectada. Datos 100 % sinteticos. Mientras el motor este incompleto, overall se calcula solo sobre los saltos implementados (origin, dns)."
+  "notes": "Enrutamiento de aplicacion apagado pero el nombre resuelve a la IP privada del endpoint (trafico RFC1918 entra a la VNet): sin falla detectada. Datos 100 % sinteticos. El motor es parcial: overall se calcula solo sobre los saltos evaluados (origin, dns) y nunca es green mientras complete sea false (un verde se degrada a amber)."
 }

@@ -7,7 +7,7 @@ Everything below is **planned**. None of it exists yet unless it is listed under
 - JSON Schemas for the snapshot and for the expected verdict (`schemas/`, v1.0.0), including the optional `evidence.runtime` field.
 - First synthetic corpus case: `corpus/demo-basic-01` (DNS zone not linked to the integration VNet, no data role).
 - Synthetic-data hygiene check with tests, pre-commit hook and pinned gitleaks, enforced in CI.
-- Phase 1 prototype in Python (`src/reachwhy/`, `tests/`): dns hop (fallback to internet, site and VNet DNS servers, zones in other subscriptions) and origin application routing, over a local snapshot, with 10 more synthetic corpus cases. *In a pull request; its pytest suite runs in the `tests` CI job; not run against real Azure data (there is no collector yet).*
+- Phase 1 prototype in Python (`src/reachwhy/`, `tests/`): dns hop (fallback to internet, site and VNet DNS servers, zones in other subscriptions) and origin application routing, over a local snapshot, with 10 more synthetic corpus cases. *Already on `main`, merged in #1; its pytest suite runs in the `tests` CI job; not run against real Azure data (there is no collector yet).*
 
 ## Next: first usable version
 
@@ -25,7 +25,7 @@ Scope: Azure only, 3 origins × 3 targets (see [docs/design.md](docs/design.md))
 
 Details, affected hops and public sources: [docs/design.md](docs/design.md#planned-improvements). All of them keep reachwhy at Reader only.
 
-**Phase 1: control-plane reads (Reader only)** — prototype done, in a pull request
+**Phase 1: control-plane reads (Reader only)** — prototype done, already on `main`, merged in #1
 - [x] (S) Fallback to internet (`resolutionPolicy: NxDomainRedirect`) on private zone links, and linked `privatelink.*` zones that have no record for the target.
 - [x] (S–M) Site properties `dnsConfiguration` and `outboundVnetRouting` / legacy `vnetRouteAllEnabled`.
 - [x] (S) Private zones and records in other readable subscriptions through Resource Graph `dnsresources`.

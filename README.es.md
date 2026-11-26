@@ -1,26 +1,191 @@
 # reachwhy
 
-**Tu Function App no llega a su private endpoint. reachwhy te dice qué salto falla y por qué.**
+**Qué salto falla, y por qué.**
 
-Diagnóstico de solo lectura, salto por salto, para Azure: DNS, red y RBAC.
+Tu Function App no llega a su private endpoint. reachwhy es un diagnóstico de solo lectura, salto por salto, para Azure: DNS, red y RBAC. Hoy es un prototipo pre-alfa en Python que analiza un snapshot JSON local para dos saltos; el recolector de Azure y la interfaz de escritorio siguen previstos.
 
 [Read in English](README.md)
 
 [![CI](https://github.com/p3rformative/reachwhy/actions/workflows/ci.yml/badge.svg)](https://github.com/p3rformative/reachwhy/actions/workflows/ci.yml)
-![status: pre-alpha](https://img.shields.io/badge/status-pre--alpha-lightgrey)
-![read-only](https://img.shields.io/badge/Azure%20access-read--only-blue)
+![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+![status: pre-alfa](https://img.shields.io/badge/status-pre--alpha-lightgrey)
 
-> **Estado: pre-alfa.** Todavía no hay aplicación: ni interfaz de escritorio ni recolector para Azure. Hoy el repo contiene el diseño, los JSON Schema, casos de prueba sintéticos, las herramientas de higiene de datos y un prototipo en Python que analiza un archivo de snapshot local para el salto dns y el enrutamiento de la aplicación (fase 1, en un pull request). Todo lo que abajo describe la app es comportamiento previsto y está marcado así.
+![reachwhy: Qué salto falla, y por qué. Leyenda de verde, rojo con causa exacta, y ámbar cuando no se puede verificar. La imagen está en inglés.](docs/social-preview.png)
+
+> **Estado: pre-alfa.** Todavía no hay interfaz de escritorio ni recolector para Azure. En `main` el repo tiene el diseño, los JSON Schema, 11 casos de prueba sintéticos, las herramientas de higiene de datos y un prototipo en Python que analiza un snapshot local para el salto `dns` y el enrutamiento de la aplicación (fase 1, ya en `main`, integrada en [#1](https://github.com/p3rformative/reachwhy/pull/1)). Todo lo que describe la app futura está marcado como previsto.
+
+## Por qué
+
+Tu Function App, Container App o App Service da timeout contra un Storage, Key Vault o SQL detrás de un private endpoint.
+El DNS se ve bien desde tu laptop, el portal muestra el endpoint como Approved y la app sigue dando timeout o 403.
+¿Es la zona DNS privada, una UDR o un NSG, el endpoint o un rol de datos que falta? reachwhy busca responder eso por salto, con la causa exacta y la evidencia que leyó.
+
+¿Por qué no basta con nslookup o Connection Troubleshoot?
+
+- **Connection Troubleshoot, Connection Monitor y Network Verifier** no listaban Function Apps, Container Apps ni App Service como origen en su documentación (leída el 2026-11-12, ver [Related tools](docs/design.md#related-tools)). reachwhy parte del origen PaaS.
+- **nslookup y las sondas en ejecución** como [azpe](https://github.com/nukabo/azpe) muestran a qué resuelve un nombre desde donde se ejecutan. reachwhy busca leer el plano de control y decir por qué, salto por salto: zona, link a la VNet, registro A, estado del endpoint, rol de datos. Son complementarios: los resultados en ejecución se pueden importar como `evidence.runtime` (previsto; el campo ya existe en el esquema).
+- **Las herramientas de topología** como [azlinks](https://github.com/bmw99x/azlinks) mapean recursos y algunos hallazgos. reachwhy apunta a un veredicto por salto: verde, rojo con código de causa o ámbar cuando no puede saberlo.
+
+## Características
+
+**Hoy**, en `main` (prototipo de la fase 1, Python 3.12+):
+
+- Analiza un snapshot JSON local. Sin red, sin llamadas a Azure, sin credenciales.
+- Evalúa 2 de 7 saltos: `origin` (enrutamiento de la aplicación del sitio) y `dns` (zona privada, link a la VNet, registro A, fallback a internet, DNS personalizado del sitio o de la VNet, y zonas presentes en otras suscripciones del snapshot).
+- Cada salto evaluado queda **verde**, **rojo** con un código de causa, o **ámbar** cuando no se puede verificar. Los códigos citan una página de Microsoft Learn en `sources`.
+- El veredicto siempre es parcial (`complete: false`). `overall` nunca es `green` mientras falten saltos: si en los evaluados no hay falla, `overall` es `amber`.
+- Todo veredicto de `dns` lleva la salvedad de que las app settings `WEBSITE_DNS_SERVER` y `WEBSITE_DNS_ALT_SERVER` no son legibles con Reader.
+- Incluye 11 casos sintéticos en el corpus y los JSON Schema del snapshot y del veredicto esperado (v1.0.0).
+- El workflow de CI `ci` (`.github/workflows/ci.yml`) corre `gitleaks`, `hygiene` y `tests` (pytest).
+
+**Previsto** (aún no está construido; ver [ROADMAP.md](ROADMAP.md)):
+
+- Recolector de solo lectura con tu propio `az login` (Resource Graph y GET de ARM), que escribe snapshots fuera de git.
+- Interfaz de escritorio (Tauri) con un modo demo sobre datos sintéticos.
+- Los saltos que faltan: `route`, `nsg`, `pe`, `target-net`, `rbac`.
+- Un motor de reglas en Rust y, más adelante, importar evidencia en ejecución (`evidence.runtime`).
+- Alcance de la primera versión: Function App, App Service y Container App como orígenes; Storage, Key Vault y Azure SQL Database detrás de un private endpoint como destinos. El prototipo de hoy lee propiedades del sitio desde un snapshot (los casos del corpus usan una Function App y un Storage blob). La integración VNet, la delegación de subred y las reglas de origen para Container Apps todavía no están implementadas.
+
+## Inicio rápido
+
+Requisitos: git y Python 3.12+. El prototipo solo lee archivos locales.
+
+```sh
+git clone https://github.com/p3rformative/reachwhy.git && cd reachwhy
+PYTHONPATH=src python3 -m reachwhy --case corpus/synthetic-dns-fallback-01
+```
+
+PowerShell:
+
+```powershell
+git clone https://github.com/p3rformative/reachwhy.git; Set-Location reachwhy
+$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
+```
+
+O instala el comando `reachwhy` y corre los tests:
+
+```sh
+python3 -m pip install -e '.[test]'
+reachwhy --case corpus/synthetic-dns-fallback-01
+reachwhy ruta/al/snapshot.json --origin <id-origen> --target <id-destino> --subresource blob
+python3 -m pytest
+```
+
+El comando imprime el veredicto como JSON y termina con código 1 si `overall` es `red`, o 0 en cualquier otro caso (incluido `amber`).
+
+Desde Python (después de `pip install -e .`, o con `src` en `PYTHONPATH`):
+
+```python
+import json
+from reachwhy import analyze
+
+case = "corpus/synthetic-dns-fallback-01"
+snapshot = json.load(open(f"{case}/snapshot.json", encoding="utf-8"))
+pair = json.load(open(f"{case}/expected.json", encoding="utf-8"))["pair"]
+verdict = analyze(snapshot, pair["origin"], pair["target"], pair["targetSubresource"])
+print(verdict["overall"], verdict["summary"])
+```
 
 ## Demo
 
-Aún no hay GIF ni captura, porque la app no existe. Esta es la **salida prevista** para el caso sintético [`corpus/demo-basic-01`](corpus/demo-basic-01). Los estados y códigos salen del [`expected.json`](corpus/demo-basic-01/expected.json) de ese caso; los saltos que el caso no afirma se muestran con `·`.
+Esta es la **salida real del CLI** del comando de arriba, para el caso sintético [`corpus/synthetic-dns-fallback-01`](corpus/synthetic-dns-fallback-01). En resumen: `overall` es `amber`, `complete` es `false`, `origin` queda en verde (el tráfico de la aplicación sale por la VNet) y `dns` queda en ámbar con `DNS_FALLBACK_TO_PUBLIC`. Código de salida: 0.
+
+<details>
+<summary>Veredicto JSON completo (clic para expandir)</summary>
+
+```json
+{
+  "pair": {
+    "origin": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+    "target": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+    "targetSubresource": "blob"
+  },
+  "overall": "amber",
+  "firstRedHop": null,
+  "complete": false,
+  "summary": "2 of 7 hops evaluated (origin, dns); not evaluated: route, nsg, pe, target-net, rbac.",
+  "evaluatedHops": [
+    "origin",
+    "dns"
+  ],
+  "notEvaluated": [
+    "route",
+    "nsg",
+    "pe",
+    "target-net",
+    "rbac"
+  ],
+  "hops": [
+    {
+      "id": "origin",
+      "state": "green",
+      "code": null,
+      "cause": "Application traffic is routed through the VNet integration.",
+      "evidence": [
+        {
+          "kind": "arm",
+          "resource": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.web/sites/func-demo",
+          "path": "properties.vnetRouteAllEnabled",
+          "value": true
+        }
+      ],
+      "sources": [
+        "https://learn.microsoft.com/en-us/azure/app-service/configure-vnet-integration-routing",
+        "https://learn.microsoft.com/en-us/azure/app-service/overview-vnet-integration"
+      ],
+      "caveats": [
+        "Only application routing was evaluated; VNet integration and subnet delegation are not evaluated yet."
+      ]
+    },
+    {
+      "id": "dns",
+      "state": "amber",
+      "code": "DNS_FALLBACK_TO_PUBLIC",
+      "cause": "Zone privatelink.blob.core.windows.net is linked but has no A record for stdemo001; the link has fallback to internet (NxDomainRedirect), so the name is retried through public recursion and resolves to a public IP. Whether that is reachable depends on the target's public network access.",
+      "evidence": [
+        {
+          "kind": "arm",
+          "resource": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/privatednszones/privatelink.blob.core.windows.net",
+          "path": "A records",
+          "value": []
+        },
+        {
+          "kind": "arm",
+          "resource": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.network/privatednszones/privatelink.blob.core.windows.net",
+          "path": "virtualNetworkLinks.resolutionPolicy",
+          "value": "NxDomainRedirect"
+        },
+        {
+          "kind": "arm",
+          "resource": "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/rg-demo/providers/microsoft.storage/storageaccounts/stdemo001",
+          "path": "properties.publicNetworkAccess",
+          "value": "Disabled"
+        }
+      ],
+      "sources": [
+        "https://learn.microsoft.com/en-us/azure/dns/private-dns-fallback"
+      ],
+      "caveats": [
+        "App settings WEBSITE_DNS_SERVER and WEBSITE_DNS_ALT_SERVER are not readable with Reader: this verdict assumes they are not set; only the site property dnsConfiguration was checked."
+      ],
+      "whyUnverifiable": "The result depends on the target's public network access (target-net hop, not evaluated here).",
+      "howToVerify": "From a VM inside the integration VNet: Resolve-DnsName stdemo001.blob.core.windows.net -Type A | Select-Object Name, IPAddress  (expect a private IP of the endpoint)"
+    }
+  ]
+}
+```
+
+</details>
+
+Todavía no hay GIF ni grabación de terminal. Este es un espacio reservado para una grabación real (por ejemplo con [vhs](https://github.com/charmbracelet/vhs) o [asciinema](https://asciinema.org/)), hecha solo con datos sintéticos de `corpus/`, nunca de un entorno real. No agregues una falsa.
+
+La tabla de abajo es **presentación prevista**, no lo que imprime el CLI hoy. Los estados y códigos salen del [`expected.json`](corpus/demo-basic-01/expected.json) de [`corpus/demo-basic-01`](corpus/demo-basic-01); los saltos que el caso no afirma se muestran con `·`. El prototipo solo evalúa `origin` y `dns`, así que todavía no emite las filas de `pe` ni de `rbac`.
 
 *Siempre es el DNS. Excepto cuando también es RBAC.*
 
 ```text
-# ejemplo sintético, salida prevista (el prototipo en Python solo evalúa por ahora los saltos origin (enrutamiento) y dns)
+# ejemplo sintético, salida prevista
 origen   func-demo  (Function App, integración VNet: snet-func-demo)
 destino  stdemo001  (Storage, blob, private endpoint pe-st-demo-blob)
 
@@ -37,32 +202,21 @@ global: ROJO    primer salto en rojo: dns
   ✔ verde   ✘ rojo (causa exacta)   ? ámbar (no verificable desde el plano de control)   · no afirmado
 ```
 
-Se reemplazará por una grabación real (por ejemplo con [vhs](https://github.com/charmbracelet/vhs) o [asciinema](https://asciinema.org/)) cuando haya código que ejecutar, solo con datos sintéticos de `corpus/`.
+## Cómo funciona
 
-## Qué resuelve
+**Hoy:** apuntas el prototipo en Python a un snapshot local (o a un caso del corpus). Un motor de reglas puro evalúa `origin` y `dns` e imprime un veredicto JSON. Nunca llama a Azure.
 
-Tu Function App, Container App o App Service da timeout contra un Storage, Key Vault o SQL detrás de un private endpoint.
-El DNS se ve bien desde tu laptop, el portal muestra el endpoint como Approved y la app sigue dando timeout o 403.
-¿Es la zona DNS privada, una UDR o un NSG, el endpoint o un rol de datos que falta? reachwhy busca responder eso por salto, con la causa exacta y la evidencia que leyó.
-
-## ¿Por qué no basta con nslookup o Connection Troubleshoot?
-
-- **Connection Troubleshoot, Connection Monitor y Network Verifier** no listaban Function Apps, Container Apps ni App Service como origen en su documentación (leída el 2026-11-12, ver [Related tools](docs/design.md#related-tools)). reachwhy parte del origen PaaS.
-- **nslookup y las sondas en ejecución** como [azpe](https://github.com/nukabo/azpe) muestran a qué resuelve un nombre desde donde se ejecutan. reachwhy busca leer el plano de control y decir por qué, salto por salto: zona, link a la VNet, registro A, estado del endpoint, rol de datos. Son complementarios: los resultados en ejecución se pueden importar como `evidence.runtime`.
-- **Las herramientas de topología** como [azlinks](https://github.com/bmw99x/azlinks) mapean recursos y algunos hallazgos. reachwhy apunta a un veredicto por salto: verde, rojo con código de causa o ámbar cuando no puede saberlo.
-
-## Cómo funciona (previsto)
-
-reachwhy lee el plano de control de Azure (Resource Graph y ARM, solo lectura, con tu propio `az login`), arma un snapshot JSON local y le aplica un motor de reglas puro. Cada salto queda en uno de tres estados: **verde**, **rojo** con un código de causa exacta, o **ámbar** cuando no se puede verificar con los datos disponibles. El motor evalúa todos los saltos; no se detiene en el primer rojo.
+**Previsto:** un recolector de solo lectura usa tu `az login` (Resource Graph y ARM) para armar ese snapshot, el motor evalúa los siete saltos y una interfaz de escritorio muestra la ruta. El motor tampoco se detendrá en el primer salto en rojo.
 
 ```mermaid
 flowchart LR
-    O["origin<br/>integración VNet"] --> D["dns<br/>zona privada, link, registro A"]
-    D --> R["route<br/>UDR, peering"]
-    R --> N["nsg<br/>salida / subred del PE"]
-    N --> P["pe<br/>estado del private endpoint"]
-    P --> T["target-net<br/>acceso público, ACL"]
-    T --> B["rbac<br/>identidad, rol de datos"]
+    S["snapshot JSON local"] --> O["origin<br/>enrutamiento de la aplicación"]
+    O --> D["dns<br/>zona, link, registro A, fallback"]
+    D -.-> R["route<br/>UDR, peering: previsto"]
+    R -.-> N["nsg<br/>previsto"]
+    N -.-> P["pe<br/>previsto"]
+    P -.-> T["target-net<br/>previsto"]
+    T -.-> B["rbac<br/>previsto"]
 ```
 
 El orden de saltos, los códigos de regla y el modelo de datos están en [docs/design.md](docs/design.md) (en inglés). Los formatos del snapshot y del veredicto esperado ya existen como JSON Schema en [`schemas/`](schemas).
@@ -80,27 +234,24 @@ Detalle y lista completa de lo que queda fuera: [docs/design.md](docs/design.md#
 
 | Área | Hoy | Previsto |
 |---|---|---|
-| Orígenes | ninguno (sin código) | Function App, App Service, Container App |
-| Destinos | ninguno (sin código) | Storage (blob, file, queue, table, dfs), Key Vault, Azure SQL Database, todos detrás de un private endpoint |
+| Orígenes | Function App en un snapshot local (solo enrutamiento de la aplicación; sin recolector de Azure) | Function App, App Service, Container App |
+| Destinos | Storage (blob) en un snapshot local, para los saltos ya implementados | Storage (blob, file, queue, table, dfs), Key Vault, Azure SQL Database, todos detrás de un private endpoint |
 | Formatos | JSON Schema del snapshot y del veredicto esperado (v1.0.0) | importar evidencia en ejecución (`evidence.runtime`, ya es un campo opcional del esquema) |
 | Corpus de pruebas | 11 casos sintéticos (`demo-basic-01` y 10 de la fase 1) | más casos sintéticos reconstruidos desde artículos públicos de troubleshooting |
-| Prototipo de análisis | Python: salto dns y enrutamiento de la aplicación sobre un snapshot local (fase 1) | los demás saltos, luego el motor en Rust |
-| Herramientas | gitleaks e higiene de datos en CI y pre-commit; tests del prototipo (pytest) en CI | tests del motor en Rust sobre el corpus en CI |
+| Prototipo de análisis | Python: salto `dns` y enrutamiento de la aplicación sobre un snapshot local (fase 1, en `main`) | los demás saltos, luego el motor en Rust |
+| Herramientas | gitleaks, higiene de datos y tests del prototipo (pytest) en CI y pre-commit | tests del motor en Rust sobre el corpus en CI |
 
 Ver [ROADMAP.md](ROADMAP.md).
 
 ### Permisos de Azure previstos
 
-El diseño solo pide **Reader** en las suscripciones o grupos de recursos involucrados (incluido el que tiene las zonas DNS privadas). Sin Contributor, sin `list keys`, sin app settings, sin plano de datos. Lo que el usuario no pueda leer queda en ámbar, nunca en rojo. Nada de esto está implementado; ver [docs/design.md](docs/design.md#planned-permissions).
+El diseño solo pide **Reader** en las suscripciones o grupos de recursos involucrados (incluido el que tiene las zonas DNS privadas). Sin Contributor, sin `list keys`, sin app settings, sin plano de datos. Lo que el usuario no pueda leer queda en ámbar, nunca en rojo. El recolector que usaría estos permisos todavía no está implementado; ver [docs/design.md](docs/design.md#planned-permissions).
 
 ## Desarrollo
 
-Requisitos: git y Python 3.12. Opcional: [gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 (versión fija, ver [docs/tooling.md](docs/tooling.md)).
-
-bash:
+Opcional: [gitleaks](https://github.com/gitleaks/gitleaks) 8.30.1 (versión fija, ver [docs/tooling.md](docs/tooling.md)).
 
 ```sh
-git clone https://github.com/p3rformative/reachwhy.git && cd reachwhy
 scripts/install-hooks.sh
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
@@ -110,56 +261,11 @@ gitleaks git --no-banner --redact --config .gitleaks.toml .
 PowerShell:
 
 ```powershell
-git clone https://github.com/p3rformative/reachwhy.git; Set-Location reachwhy
 ./scripts/install-hooks.ps1
 python -m unittest discover -s scripts/ci/tests -v
 python scripts/ci/check_hygiene.py corpus schemas docs
 gitleaks git --no-banner --redact --config .gitleaks.toml .
 ```
-
-Prototipo de la fase 1 (Python 3.12+; solo lee archivos locales, sin red ni acceso a Azure). Se ejecuta desde la raíz del repositorio de dos maneras:
-
-```sh
-# Bash: opción 1, sin instalar (desde la raíz del repo)
-PYTHONPATH=src python3 -m reachwhy --case corpus/synthetic-dns-fallback-01
-
-# Bash: opción 2, instalación editable (agrega el comando `reachwhy`)
-python3 -m pip install -e .
-reachwhy --case corpus/synthetic-dns-fallback-01
-reachwhy ruta/al/snapshot.json --origin <id-origen> --target <id-destino> --subresource blob
-
-# tests
-python3 -m pip install -e '.[test]'   # pytest y jsonschema
-python3 -m pytest
-```
-
-```powershell
-# PowerShell: opción 1, sin instalar (desde la raíz del repo)
-$env:PYTHONPATH = 'src'; python -m reachwhy --case corpus/synthetic-dns-fallback-01
-
-# PowerShell: opción 2, instalación editable (agrega el comando `reachwhy`)
-python -m pip install -e .
-reachwhy --case corpus/synthetic-dns-fallback-01
-
-# tests
-python -m pip install -e '.[test]'   # pytest y jsonschema
-python -m pytest
-```
-
-Desde Python (después de `pip install -e .`, o con `src` en `PYTHONPATH`):
-
-```python
-import json
-from reachwhy import analyze
-
-case = "corpus/synthetic-dns-fallback-01"
-snapshot = json.load(open(f"{case}/snapshot.json", encoding="utf-8"))
-pair = json.load(open(f"{case}/expected.json", encoding="utf-8"))["pair"]
-verdict = analyze(snapshot, pair["origin"], pair["target"], pair["targetSubresource"])
-print(verdict["overall"], verdict["summary"])
-```
-
-El comando imprime el veredicto como JSON y termina con código 1 si el veredicto global es rojo, y 0 en otro caso. El veredicto siempre es parcial (`complete: false`): solo se evalúan los saltos `origin` (enrutamiento de la aplicación) y `dns`, así que `overall` nunca es `green`: si no se encuentra una falla es `amber`, y `summary` dice "2 of 7 hops evaluated". Todo veredicto de `dns` lleva la salvedad de que las app settings `WEBSITE_DNS_SERVER` y `WEBSITE_DNS_ALT_SERVER` no son legibles con Reader. El CI ejecuta estos tests en el job `tests` (ver [docs/pending-ci.md](docs/pending-ci.md)).
 
 Todo dato del repo es sintético: IPs solo en `10.20.0.0/16` y rangos de documentación, nombres con `demo` o `example`, GUID de ceros. Los snapshots crudos o reales (`*.raw.json`, `*.real.json`, `snapshots/`) están en `.gitignore` y el hook los rechaza.
 
@@ -173,15 +279,17 @@ Todo dato del repo es sintético: IPs solo en `10.20.0.0/16` y rangos de documen
 
 | Ruta | Contenido |
 |---|---|
+| `src/reachwhy/` | Prototipo en Python de la fase 1: análisis de un snapshot local para `origin` y `dns`. |
 | `docs/design.md` | Arquitectura prevista, reglas por salto, modelo de datos y formato del corpus. |
-| `ROADMAP.md` | Lo previsto, en orden. Nada de eso existe todavía. |
+| `ROADMAP.md` | Lo que ya está hecho y lo previsto, en orden. |
 | `docs/tooling.md` | Versión fija de gitleaks, hooks y comprobaciones locales. |
 | `docs/pending-ci.md` | CI activo y CI previsto pero no activado. |
+| `docs/social-preview.png` | Imagen social y de portada del README (1280×640). |
 | `schemas/` | JSON Schema del snapshot y de `expected.json`. |
-| `corpus/` | Casos sintéticos de "repro de red". Hoy: `demo-basic-01`. |
+| `corpus/` | 11 casos sintéticos (`demo-basic-01` y 10 de la fase 1). |
 | `scripts/ci/` | Comprobación de higiene de datos sintéticos y sus tests. |
 | `.githooks/` | Hook pre-commit (higiene y gitleaks si está instalado). |
-| `.github/workflows/ci.yml` | CI: `gitleaks` e `hygiene`. |
+| `.github/workflows/ci.yml` | Jobs de CI: `gitleaks`, `hygiene` y `tests`. |
 
 Sin íconos de Azure ni de Microsoft en este repo.
 

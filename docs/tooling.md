@@ -7,7 +7,7 @@
 - Instalación manual: descargar de las releases oficiales, comprobar el SHA-256 y poner el binario en el PATH. Para otras plataformas, usar el checksum de la misma release.
 - El SHA-256 fijado vive en `.gitleaks-sha256`; el CI lo usa para verificar la descarga (no descarga un checksum en la corrida). Al cambiar de versión se actualizan `.gitleaks-version`, `.gitleaks-sha256` y este documento.
 - El hook avisa si la versión instalada difiere de la fija. Se puede apuntar a un binario concreto con `GITLEAKS_BIN`.
-- Las rutas de la allowlist de `.gitleaks.toml` usan `(^|/)corpus/`, `(^|/)schemas/` y `(^|/)docs/`, así que funcionan tanto desde la raíz del repo como pasando la ruta absoluta del repo desde otra carpeta. Efecto secundario conocido: también eximen una carpeta con ese nombre a cualquier profundidad (p. ej. `scripts/docs/`); solo para el GUID sintético de ceros.
+- Las rutas de la allowlist de `.gitleaks.toml` usan `(^|/)corpus/`, `(^|/)schemas/`, `(^|/)docs/` y `(^|/)README(\.es)?\.md$`, así que funcionan tanto desde la raíz del repo como pasando la ruta absoluta del repo desde otra carpeta. Efecto secundario conocido: también eximen una carpeta con ese nombre a cualquier profundidad (p. ej. `scripts/docs/`); solo para el GUID sintético de ceros.
 
 Desde la raíz del repo (bash o PowerShell):
 
@@ -34,10 +34,10 @@ gitleaks git --no-banner --redact --config "$repo\.gitleaks.toml" $repo
 
 ## Allowlist del GUID de suscripción
 
-La regla `subscription-guid` dispara con un GUID precedido de contexto de suscripción. La allowlist exime únicamente `^0{8}-0{4}-0{4}-0{4}-[0-9a-f]{12}$` y solo en `corpus/`, `schemas/` y `docs/`.
+La regla `subscription-guid` dispara con un GUID precedido de contexto de suscripción. La allowlist exime únicamente `^0{8}-0{4}-0{4}-0{4}-[0-9a-f]{12}$` y solo en `corpus/`, `schemas/`, `docs/` y los README de la raíz (`README.md`, `README.es.md`).
 
 - `condition = "AND"` es obligatorio: con el valor por defecto (`OR`) el regex exime el GUID de ceros en cualquier carpeta.
-- Comportamiento verificado con gitleaks 8.30.1: GUID de ceros en `corpus/` → sin hallazgo; el mismo fuera de esas carpetas → hallazgo; una clave tipo AWS falsa en `corpus/` → hallazgo (la allowlist es solo de la regla del GUID).
+- Comportamiento verificado con gitleaks 8.30.1: GUID de ceros en `corpus/` o en `README.md` → sin hallazgo; el mismo fuera de esas rutas → hallazgo; una clave tipo AWS falsa en `corpus/` → hallazgo (la allowlist es solo de la regla del GUID).
 - La convención más estricta del repo (sufijo `0000000000NN`) la hace cumplir `scripts/ci/check_hygiene.py`, no gitleaks.
 
 ## Hook pre-commit de higiene
